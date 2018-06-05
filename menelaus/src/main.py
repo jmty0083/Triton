@@ -65,13 +65,13 @@ class TfidfVectorizer(sklearn.feature_extraction.text.TfidfVectorizer):
         return analyzer
 
 
-num, content, label = load_data('data/spams.txt')
+num, content, label = load_data('../data/spams.txt')
 vec_tf_idf = TfidfVectorizer(min_df=2, max_df=0.8)
 data_tf_idf = vec_tf_idf.fit_transform(content)
 name_tf_idf_feature = vec_tf_idf.get_feature_names()
 
 
-io.mmwrite('output/word_vector.mtx', data_tf_idf)
+io.mmwrite('../output/word_vector.mtx', data_tf_idf)
 
 
 #import inspect, os
