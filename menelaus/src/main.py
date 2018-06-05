@@ -1,10 +1,10 @@
 import numpy as np
+import time
 import jieba
 import jieba.posseg as pseg
 import sklearn.feature_extraction.text
 from sklearn import preprocessing
-from scipy import sparse, io
-from sklearn.externals import joblib
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 import re
 from scipy import sparse, io
@@ -28,9 +28,9 @@ def load_data(file):
 
 
 # 将连续的数字转变为长度的维度
-def process_cont_numbers(content):
-    digits_features = np.zeros((len(content), 16))
-    for i, line in enumerate(content):
+def process_cont_numbers(c):
+    digits_features = np.zeros((len(c), 16))
+    for i, line in enumerate(c):
         for digits in re.findall(r'\d+', line):
             length = len(digits)
             if 0 < length <= 15:
@@ -45,18 +45,33 @@ def split_data(c, la):
         c, la, test_size=0.1, random_state=0)
     return training_data, test_data, training_target, test_target
 
+
 def standardized_data(c, la):
-    training_data, test_data, training_target, test_target = split_data(content, label)
+    training_data, test_data, training_target, test_target = split_data(c, la)
     scalar = preprocessing.StandardScaler().fit(training_data)
     training_data_transformed = scalar.transform(training_data)
     test_data_transformed = scalar.transform(test_data)
     return training_data_transformed, test_data_transformed, training_target, test_target
 
 
+def dimensionality_reduction(training_data, test_data, t='pca'):
+    if t == 'pca':
+        n_components = 1000
+        t0 = time.time()
+        pca = PCA(n_components=n_components, svd_solver='randomized', whiten=True)
+        pca.fit(training_data)
+        print("done in %0.3fs" % (time.time() - t0))
+        t0 = time.time()
+        training_data_transform = sparse.csr_matrix(pca.transform(training_data))
+        test_data_transform = sparse.csr_matrix(pca.transform(test_data))
+        print("done in %0.3fs" % (time.time() - t0))
+        return training_data_transform, test_data_transform
+
+
 # 用TF-ID生成对应词向量
-class TfidfVectorizer(sklearn.feature_extraction.text.TfidfVectorizer):
+class TfidfVector(sklearn.feature_extraction.text.TfidfVectorizer):
     def build_analyzer(self):
-        # analyzer = super(TfidfVectorizer, self).build_analyzer()
+        # analyzer = super(TfidfVector, self).build_analyzer()
         def analyzer(doc):
             words = pseg.cut(doc)
             new_doc = ''.join(w.word for w in words if w.flag != 'x')
@@ -66,7 +81,7 @@ class TfidfVectorizer(sklearn.feature_extraction.text.TfidfVectorizer):
 
 
 num, content, label = load_data('../data/spams.txt')
-vec_tf_idf = TfidfVectorizer(min_df=2, max_df=0.8)
+vec_tf_idf = TfidfVector(min_df=2, max_df=0.8)
 data_tf_idf = vec_tf_idf.fit_transform(content)
 name_tf_idf_feature = vec_tf_idf.get_feature_names()
 
