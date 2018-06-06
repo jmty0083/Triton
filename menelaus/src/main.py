@@ -1,13 +1,15 @@
-import numpy as np
+import re
 import time
+
 import jieba
 import jieba.posseg as pseg
+import numpy as np
 import sklearn.feature_extraction.text
+from scipy import sparse, io
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-import re
-from scipy import sparse, io
+from src import MLPTrainer
 
 
 # read data from file path
@@ -41,31 +43,29 @@ def process_cont_numbers(c):
 
 
 def split_data(c, la):
-    training_data, test_data, training_target, test_target = train_test_split(
-        c, la, test_size=0.1, random_state=0)
-    return training_data, test_data, training_target, test_target
+    ta, ya, tb, yb = train_test_split(c, la, test_size=0.1, random_state=0)
+    return ta, ya, tb, yb
 
 
 def standardized_data(c, la):
-    training_data, test_data, training_target, test_target = split_data(c, la)
-    scalar = preprocessing.StandardScaler().fit(training_data)
-    training_data_transformed = scalar.transform(training_data)
-    test_data_transformed = scalar.transform(test_data)
-    return training_data_transformed, test_data_transformed, training_target, test_target
+    ta, ya, tb, yb = split_data(c, la)
+    scalar = preprocessing.StandardScaler().fit(ta)
+    training_data_transformed = scalar.transform(ta)
+    test_data_transformed = scalar.transform(ya)
+    return training_data_transformed, test_data_transformed, tb, yb
 
 
-def dimensionality_reduction(training_data, test_data, t='pca'):
-    if t == 'pca':
-        n_components = 1000
-        t0 = time.time()
-        pca = PCA(n_components=n_components, svd_solver='randomized', whiten=True)
-        pca.fit(training_data)
-        print("done in %0.3fs" % (time.time() - t0))
-        t0 = time.time()
-        training_data_transform = sparse.csr_matrix(pca.transform(training_data))
-        test_data_transform = sparse.csr_matrix(pca.transform(test_data))
-        print("done in %0.3fs" % (time.time() - t0))
-        return training_data_transform, test_data_transform
+def dimensionality_reduction(td, yd):
+    n_components = 1000
+    t0 = time.time()
+    pca = PCA(n_components=n_components, svd_solver='randomized', whiten=True)
+    pca.fit(td)
+    print("done in %0.3fs" % (time.time() - t0))
+    t0 = time.time()
+    training_data_transform = sparse.csr_matrix(pca.transform(td))
+    test_data_transform = sparse.csr_matrix(pca.transform(yd))
+    print("done in %0.3fs" % (time.time() - t0))
+    return training_data_transform, test_data_transform
 
 
 # 用TF-ID生成对应词向量
@@ -86,8 +86,11 @@ data_tf_idf = vec_tf_idf.fit_transform(content)
 name_tf_idf_feature = vec_tf_idf.get_feature_names()
 
 
-io.mmwrite('../output/word_vector.mtx', data_tf_idf)
+training_data, test_data, training_target, test_target = split_data(data_tf_idf, label)
+training_data, test_data = dimensionality_reduction(training_data.todense(), test_data.todense())
 
+trainer = MLPTrainer.MLPTrainer(training_data, test_data)
+trainer.train_classifier()
 
 #import inspect, os
 #print(os.path.abspath("data/spams.txt"))
