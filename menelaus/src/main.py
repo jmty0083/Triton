@@ -10,6 +10,7 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from src import MLPTrainer
+from src import SvmTrainerLinear
 
 
 # read data from file path
@@ -18,7 +19,7 @@ def load_data(file):
     la = []
     lines = []
     with open(file) as fr:
-        for i in range(10000):
+        for i in range(1000):
             line = fr.readline()
             lines.append(line)
         n = len(lines)
@@ -29,7 +30,6 @@ def load_data(file):
     return n, c, la
 
 
-# 将连续的数字转变为长度的维度
 def process_cont_numbers(c):
     digits_features = np.zeros((len(c), 16))
     for i, line in enumerate(c):
@@ -68,7 +68,6 @@ def dimensionality_reduction(td, yd):
     return training_data_transform, test_data_transform
 
 
-# 用TF-ID生成对应词向量
 class TfidfVector(sklearn.feature_extraction.text.TfidfVectorizer):
     def build_analyzer(self):
         # analyzer = super(TfidfVector, self).build_analyzer()
@@ -88,6 +87,9 @@ name_tf_idf_feature = vec_tf_idf.get_feature_names()
 
 training_data, test_data, training_target, test_target = split_data(data_tf_idf, label)
 training_data, test_data = dimensionality_reduction(training_data.todense(), test_data.todense())
+
+io.mmwrite("../output/words", training_data)
+
 
 trainer = MLPTrainer.MLPTrainer(training_data, test_data)
 trainer.train_classifier()
