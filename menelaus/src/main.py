@@ -19,7 +19,8 @@ def load_data(file):
     la = []
     lines = []
     with open(file) as fr:
-        for i in range(1000):
+        #for line in fr:
+        for i in range(10000):
             line = fr.readline()
             lines.append(line)
         n = len(lines)
@@ -55,7 +56,7 @@ def standardized_data(c, la):
     return training_data_transformed, test_data_transformed, tb, yb
 
 
-def dimensionality_reduction(td, yd):
+def dimensionality_reduction(td):
     n_components = 1000
     t0 = time.time()
     pca = PCA(n_components=n_components, svd_solver='randomized', whiten=True)
@@ -63,9 +64,9 @@ def dimensionality_reduction(td, yd):
     print("done in %0.3fs" % (time.time() - t0))
     t0 = time.time()
     training_data_transform = sparse.csr_matrix(pca.transform(td))
-    test_data_transform = sparse.csr_matrix(pca.transform(yd))
+    # test_data_transform = sparse.csr_matrix(pca.transform(yd))
     print("done in %0.3fs" % (time.time() - t0))
-    return training_data_transform, test_data_transform
+    return training_data_transform
 
 
 class TfidfVector(sklearn.feature_extraction.text.TfidfVectorizer):
@@ -85,14 +86,16 @@ data_tf_idf = vec_tf_idf.fit_transform(content)
 name_tf_idf_feature = vec_tf_idf.get_feature_names()
 
 
-training_data, test_data, training_target, test_target = split_data(data_tf_idf, label)
-training_data, test_data = dimensionality_reduction(training_data.todense(), test_data.todense())
+# data_tf_idf = io.mmread('../output/word_vector.mtx')
+#training_data, test_data, training_target, test_target = split_data(data_tf_idf, label)
+training_data = dimensionality_reduction(data_tf_idf.todense())
 
-io.mmwrite("../output/words", training_data)
+# io.mmwrite("../output/words", training_data)
 
 
-trainer = MLPTrainer.MLPTrainer(training_data, test_data)
+trainer = MLPTrainer.MLPTrainer(data_tf_idf, label)
 trainer.train_classifier()
+#trainer.cross_validation()
 
 #import inspect, os
 #print(os.path.abspath("data/spams.txt"))
